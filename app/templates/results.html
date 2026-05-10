@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ITS Results</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d2528;
+        --muted: #5b686d;
+        --line: #d7dedc;
+        --field: #f7faf9;
+        --accent: #0f766e;
+        --accent-dark: #115e59;
+        --danger: #b42318;
+        --danger-bg: #fff1ef;
+        --surface: #ffffff;
+        --page: #eef4f2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--page);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(1080px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3vw, 2.75rem);
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: var(--accent-dark);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 16px 40px rgba(29, 37, 40, 0.08);
+      }
+
+      .error {
+        border-color: #f5b3ad;
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+
+      dl {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        gap: 8px 12px;
+        margin: 0 0 20px;
+      }
+
+      dt {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      dd {
+        margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+        color: var(--ink);
+        font: 0.92rem/1.45 Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+
+      .stack {
+        display: grid;
+        gap: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="topbar">
+        <h1>{% if success %}BLAST Results{% else %}Pipeline Error{% endif %}</h1>
+        <a href="/">Run another archive</a>
+      </div>
+
+      <div class="stack">
+        {% if not success %}
+          <section class="panel error">
+            <h2>{{ error }}</h2>
+            {% if stderr %}
+              <pre>{{ stderr }}</pre>
+            {% endif %}
+          </section>
+        {% endif %}
+
+        {% if success %}
+          <section class="panel">
+            <h2>Generated files</h2>
+            <dl>
+              {% if summary_path %}
+                <dt>Summary</dt>
+                <dd>{{ summary_path }}</dd>
+              {% endif %}
+              {% if fasta_path %}
+                <dt>FASTA</dt>
+                <dd>{{ fasta_path }}</dd>
+              {% endif %}
+              {% if blastn_path %}
+                <dt>blastn</dt>
+                <dd>{{ blastn_path }}</dd>
+              {% endif %}
+            </dl>
+            <pre>{{ summary_text }}</pre>
+          </section>
+        {% endif %}
+
+        {% if stdout %}
+          <section class="panel">
+            <h2>Pipeline log</h2>
+            <pre>{{ stdout }}</pre>
+          </section>
+        {% endif %}
+      </div>
+    </main>
+  </body>
+</html>

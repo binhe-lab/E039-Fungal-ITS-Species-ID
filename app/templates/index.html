@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Yeast ITS Identification</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d2528;
+        --muted: #5b686d;
+        --line: #d7dedc;
+        --field: #f7faf9;
+        --accent: #0f766e;
+        --accent-dark: #115e59;
+        --surface: #ffffff;
+        --page: #eef4f2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--page);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 56px 0;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 16px 40px rgba(29, 37, 40, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 4vw, 3.25rem);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1rem;
+      }
+
+      form {
+        display: grid;
+        gap: 18px;
+        margin-top: 32px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-weight: 700;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        min-height: 48px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+        color: var(--ink);
+      }
+
+      input[type="text"] {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      button {
+        justify-self: start;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      .note {
+        margin-top: 20px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Yeast ITS Identification</h1>
+        <p>Upload a tarball of Sanger .Seq files to run the local fungal ITS BLAST pipeline.</p>
+
+        <form action="/run" method="post" enctype="multipart/form-data">
+          <label for="tarball">
+            Sequence archive
+            <input id="tarball" name="tarball" type="file" accept=".tar,.tar.gz,.tgz" required>
+          </label>
+          <label for="blastn_path">
+            blastn path
+            <input id="blastn_path" name="blastn_path" type="text" value="{{ default_blastn_path }}" placeholder="Leave blank to use blastn from PATH">
+          </label>
+          <button type="submit">Run BLAST</button>
+        </form>
+
+        <p class="note">Results are generated from the existing command-line pipeline and written to the repository output folder.</p>
+      </section>
+    </main>
+  </body>
+</html>

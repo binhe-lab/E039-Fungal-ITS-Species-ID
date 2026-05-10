@@ -1,0 +1,29 @@
+# Python
+.venv/
+.pycache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# macOS/editor noise
+.DS_Store
+*.swp
+*.swo
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Generated pipeline data
+data/blastdb/*
+!data/blastdb/.gitkeep
+data/query/*
+!data/query/.gitkeep
+output/*
+!output/.gitkeep
+!output/README.md
+
+# Flask/runtime artifacts
+instance/
+.webassets-cache/
