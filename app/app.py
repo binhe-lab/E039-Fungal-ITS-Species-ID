@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import os
 import re
 import subprocess
@@ -56,7 +57,75 @@ def default_blastn_path() -> str:
     return ""
 
 
-def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, str | Path | None]:
+def dotted_subject(query_sequence: str, subject_sequence: str) -> str:
+    dotted = []
+    for query_base, subject_base in zip(query_sequence, subject_sequence):
+        if query_base == subject_base and query_base != "-":
+            dotted.append(".")
+        else:
+            dotted.append(subject_base)
+    return "".join(dotted)
+
+
+def match_line(query_sequence: str, subject_sequence: str) -> str:
+    matches = []
+    for query_base, subject_base in zip(query_sequence, subject_sequence):
+        matches.append("|" if query_base == subject_base and query_base != "-" else " ")
+    return "".join(matches)
+
+
+def parse_blast_table(blast_table_path: Path | None) -> list[dict]:
+    if blast_table_path is None or not blast_table_path.is_file():
+        return []
+
+    columns = (
+        "query",
+        "subject_id",
+        "percent_identity",
+        "query_coverage",
+        "evalue",
+        "bitscore",
+        "full_reference",
+        "query_start",
+        "query_end",
+        "subject_start",
+        "subject_end",
+        "query_sequence",
+        "subject_sequence",
+    )
+
+    queries: list[dict] = []
+    by_query: dict[str, dict] = {}
+
+    with blast_table_path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        for row in reader:
+            if len(row) < len(columns):
+                continue
+
+            hit = dict(zip(columns, row[: len(columns)]))
+            species_words = hit["full_reference"].split()
+            hit["species"] = " ".join(species_words[:2])
+            hit["dotted_subject_sequence"] = dotted_subject(
+                hit["query_sequence"], hit["subject_sequence"]
+            )
+            hit["match_line"] = match_line(hit["query_sequence"], hit["subject_sequence"])
+
+            query = by_query.setdefault(
+                hit["query"],
+                {
+                    "query": hit["query"],
+                    "hits": [],
+                },
+            )
+            if query not in queries:
+                queries.append(query)
+            query["hits"].append(hit)
+
+    return queries
+
+
+def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
     env = os.environ.copy()
     if blastn_path:
         env["BLASTN_BIN"] = blastn_path
@@ -71,21 +140,26 @@ def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, str | Pa
     )
 
     summary_path = extract_output_path(completed.stdout, "BLAST summary")
+    blast_table_path = extract_output_path(completed.stdout, "BLAST table")
     fasta_path = extract_output_path(completed.stdout, "Combined FASTA")
     summary_text = None
+    structured_results = []
 
     if completed.returncode == 0:
         if summary_path is None or not summary_path.is_file():
             raise RuntimeError("The pipeline completed, but no BLAST summary file was found.")
         summary_text = summary_path.read_text(encoding="utf-8")
+        structured_results = parse_blast_table(blast_table_path)
 
     return {
         "returncode": completed.returncode,
         "stdout": completed.stdout.strip(),
         "stderr": completed.stderr.strip(),
         "summary_path": summary_path,
+        "blast_table_path": blast_table_path,
         "fasta_path": fasta_path,
         "summary_text": summary_text,
+        "structured_results": structured_results,
     }
 
 
@@ -125,7 +199,9 @@ def run():
         stdout=result["stdout"],
         stderr=result["stderr"],
         summary_text=result["summary_text"],
+        structured_results=result["structured_results"],
         summary_path=result["summary_path"],
+        blast_table_path=result["blast_table_path"],
         fasta_path=result["fasta_path"],
         blastn_path=blastn_path,
         output_dir=OUTPUT_DIR,

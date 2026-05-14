@@ -122,6 +122,192 @@
         display: grid;
         gap: 20px;
       }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tab-button {
+        min-height: 42px;
+        padding: 0 14px;
+        border: 1px solid transparent;
+        border-bottom: 0;
+        border-radius: 6px 6px 0 0;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .tab-button.is-active {
+        background: var(--surface);
+        border-color: var(--line);
+        color: var(--ink);
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.is-active {
+        display: block;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+        align-items: end;
+        margin-bottom: 16px;
+      }
+
+      select {
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .controls button {
+        min-height: 42px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .controls button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        font-weight: 700;
+      }
+
+      .query-title {
+        margin: 0 0 14px;
+        font-size: 1rem;
+        overflow-wrap: anywhere;
+      }
+
+      .hit-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .hit-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+      }
+
+      .hit {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+        margin-top: 16px;
+      }
+
+      .hit:first-of-type {
+        border-top: 0;
+        margin-top: 0;
+        padding-top: 0;
+      }
+
+      .hit-title {
+        margin: 0 0 12px;
+        padding: 12px 14px;
+        border: 1px solid #bdd8d3;
+        border-radius: 6px;
+        background: #e9f8f6;
+        color: var(--ink);
+        font-size: 1.25rem;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .hit-title em {
+        font-style: italic;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 12px 0;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        background: var(--field);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 2px;
+      }
+
+      .alignment {
+        display: none;
+        margin-top: 12px;
+      }
+
+      .alignment.is-visible {
+        display: block;
+      }
+
+      .alignment pre {
+        white-space: pre;
+        overflow-x: auto;
+        font-family: Menlo, Consolas, monospace;
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 760px) {
+        .topbar,
+        .controls {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+
+        .topbar {
+          display: grid;
+        }
+
+        .metric-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
     </style>
   </head>
   <body>
@@ -143,22 +329,56 @@
 
         {% if success %}
           <section class="panel">
-            <h2>Generated files</h2>
-            <dl>
-              {% if summary_path %}
-                <dt>Summary</dt>
-                <dd>{{ summary_path }}</dd>
+            <div class="tabs" role="tablist" aria-label="Result views">
+              {% if structured_results %}
+                <button class="tab-button is-active" id="tab-query" type="button" role="tab" aria-selected="true" aria-controls="panel-query" data-tab="query">Per Query</button>
               {% endif %}
-              {% if fasta_path %}
-                <dt>FASTA</dt>
-                <dd>{{ fasta_path }}</dd>
-              {% endif %}
-              {% if blastn_path %}
-                <dt>blastn</dt>
-                <dd>{{ blastn_path }}</dd>
-              {% endif %}
-            </dl>
-            <pre>{{ summary_text }}</pre>
+              <button class="tab-button {% if not structured_results %}is-active{% endif %}" id="tab-summary" type="button" role="tab" aria-selected="{% if structured_results %}false{% else %}true{% endif %}" aria-controls="panel-summary" data-tab="summary">Simple Output</button>
+            </div>
+
+            {% if structured_results %}
+              <div class="tab-panel is-active" id="panel-query" role="tabpanel" aria-labelledby="tab-query" data-panel="query">
+                <h2>Query browser</h2>
+                <div class="controls">
+                  <label for="query-select">
+                    Query
+                    <select id="query-select"></select>
+                  </label>
+                  <button id="previous-query" type="button">Previous</button>
+                  <button id="next-query" type="button">Next</button>
+                </div>
+
+                <label class="toggle" for="show-alignments">
+                  <input id="show-alignments" type="checkbox">
+                  Show dotted BLAST alignments
+                </label>
+
+                <div id="query-browser"></div>
+              </div>
+            {% endif %}
+
+            <div class="tab-panel {% if not structured_results %}is-active{% endif %}" id="panel-summary" role="tabpanel" aria-labelledby="tab-summary" data-panel="summary">
+              <h2>Generated files</h2>
+              <dl>
+                {% if summary_path %}
+                  <dt>Summary</dt>
+                  <dd>{{ summary_path }}</dd>
+                {% endif %}
+                {% if fasta_path %}
+                  <dt>FASTA</dt>
+                  <dd>{{ fasta_path }}</dd>
+                {% endif %}
+                {% if blast_table_path %}
+                  <dt>BLAST table</dt>
+                  <dd>{{ blast_table_path }}</dd>
+                {% endif %}
+                {% if blastn_path %}
+                  <dt>blastn</dt>
+                  <dd>{{ blastn_path }}</dd>
+                {% endif %}
+              </dl>
+              <pre>{{ summary_text }}</pre>
+            </div>
           </section>
         {% endif %}
 
@@ -170,5 +390,129 @@
         {% endif %}
       </div>
     </main>
+
+    {% if success and structured_results %}
+      <script id="structured-results" type="application/json">{{ structured_results | tojson }}</script>
+      <script>
+        const results = JSON.parse(document.getElementById("structured-results").textContent);
+        const querySelect = document.getElementById("query-select");
+        const browser = document.getElementById("query-browser");
+        const previousButton = document.getElementById("previous-query");
+        const nextButton = document.getElementById("next-query");
+        const showAlignments = document.getElementById("show-alignments");
+        let currentIndex = 0;
+        const alignmentWidth = 60;
+
+        function escapeText(value) {
+          return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        function signedStep(start, end) {
+          return Number(end) >= Number(start) ? 1 : -1;
+        }
+
+        function ungappedLength(sequence) {
+          return [...sequence].filter((base) => base !== "-").length;
+        }
+
+        function formatAlignment(hit) {
+          const lines = [];
+          const labelWidth = 6;
+          const startWidth = 5;
+          let queryPosition = Number(hit.query_start);
+          let subjectPosition = Number(hit.subject_start);
+          const queryStep = signedStep(hit.query_start, hit.query_end);
+          const subjectStep = signedStep(hit.subject_start, hit.subject_end);
+
+          for (let start = 0; start < hit.query_sequence.length; start += alignmentWidth) {
+            const queryChunk = hit.query_sequence.slice(start, start + alignmentWidth);
+            const matchChunk = hit.match_line.slice(start, start + alignmentWidth);
+            const subjectChunk = hit.dotted_subject_sequence.slice(start, start + alignmentWidth);
+            const queryBases = ungappedLength(queryChunk);
+            const subjectBases = ungappedLength(hit.subject_sequence.slice(start, start + alignmentWidth));
+            const queryStart = queryPosition;
+            const subjectStart = subjectPosition;
+            const queryEnd = queryBases > 0 ? queryPosition + queryStep * (queryBases - 1) : queryPosition;
+            const subjectEnd = subjectBases > 0 ? subjectPosition + subjectStep * (subjectBases - 1) : subjectPosition;
+
+            lines.push(`${"Query".padEnd(labelWidth)}${String(queryStart).padStart(startWidth)}  ${queryChunk}  ${queryEnd}`);
+            lines.push(`${"".padEnd(labelWidth)}${"".padStart(startWidth)}  ${matchChunk}`);
+            lines.push(`${"Sbjct".padEnd(labelWidth)}${String(subjectStart).padStart(startWidth)}  ${subjectChunk}  ${subjectEnd}`);
+            lines.push("");
+
+            queryPosition = queryEnd + queryStep;
+            subjectPosition = subjectEnd + subjectStep;
+          }
+
+          return lines.join("\n").trimEnd();
+        }
+
+        function renderQuery(index) {
+          currentIndex = index;
+          const item = results[currentIndex];
+          querySelect.value = String(currentIndex);
+          previousButton.disabled = currentIndex === 0;
+          nextButton.disabled = currentIndex === results.length - 1;
+
+          const hitLinks = item.hits.map((hit, hitIndex) => `
+            <a href="#query-hit-${hitIndex + 1}">Hit ${hitIndex + 1}</a>
+          `).join("");
+
+          const hits = item.hits.map((hit, hitIndex) => `
+            <article class="hit" id="query-hit-${hitIndex + 1}">
+              <h3 class="hit-title">Hit ${hitIndex + 1}: <em>${escapeText(hit.species)}</em></h3>
+              <p>${escapeText(hit.full_reference)}</p>
+              <div class="metric-grid">
+                <div class="metric"><span>Identity</span><strong>${escapeText(hit.percent_identity)}%</strong></div>
+                <div class="metric"><span>Coverage</span><strong>${escapeText(hit.query_coverage)}%</strong></div>
+                <div class="metric"><span>E-value</span><strong>${escapeText(hit.evalue)}</strong></div>
+                <div class="metric"><span>Bitscore</span><strong>${escapeText(hit.bitscore)}</strong></div>
+              </div>
+              <div class="alignment ${showAlignments.checked ? "is-visible" : ""}">
+                <pre>${escapeText(formatAlignment(hit))}</pre>
+              </div>
+            </article>
+          `).join("");
+
+          browser.innerHTML = `
+            <nav class="hit-links" aria-label="Jump to hit">
+              ${hitLinks}
+            </nav>
+            ${hits}
+          `;
+        }
+
+        results.forEach((item, index) => {
+          const option = document.createElement("option");
+          option.value = String(index);
+          option.textContent = item.query;
+          querySelect.appendChild(option);
+        });
+
+        querySelect.addEventListener("change", () => renderQuery(Number(querySelect.value)));
+        previousButton.addEventListener("click", () => renderQuery(Math.max(0, currentIndex - 1)));
+        nextButton.addEventListener("click", () => renderQuery(Math.min(results.length - 1, currentIndex + 1)));
+        showAlignments.addEventListener("change", () => renderQuery(currentIndex));
+        document.querySelectorAll("[data-tab]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const selectedTab = button.dataset.tab;
+            document.querySelectorAll("[data-tab]").forEach((tab) => {
+              const isActive = tab.dataset.tab === selectedTab;
+              tab.classList.toggle("is-active", isActive);
+              tab.setAttribute("aria-selected", String(isActive));
+            });
+            document.querySelectorAll("[data-panel]").forEach((panel) => {
+              panel.classList.toggle("is-active", panel.dataset.panel === selectedTab);
+            });
+          });
+        });
+        renderQuery(0);
+      </script>
+    {% endif %}
   </body>
 </html>

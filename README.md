@@ -142,6 +142,11 @@ Or use the alternate port you selected, for example
 The web app uses the same command-line pipeline script and writes generated
 files to `data/query/` and `output/`.
 
+When a run finishes, the results page shows both the plain text BLAST summary
+and a query browser. The query browser lets users move through one query at a
+time with a dropdown or previous/next buttons, and can display aligned query
+and subject sequences with subject identities shown as dots.
+
 BLAST+ must be available to the process running the web app. Either install
 `blastn` on your default `PATH`, or provide the executable path in the web form.
 On this machine, for example:

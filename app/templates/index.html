@@ -110,6 +110,21 @@
         margin-top: 20px;
         font-size: 0.95rem;
       }
+
+      .status {
+        display: none;
+        margin-top: 18px;
+        padding: 14px 16px;
+        border: 1px solid #9ccfc9;
+        border-radius: 6px;
+        background: #e9f8f6;
+        color: #115e59;
+        font-weight: 700;
+      }
+
+      .status.is-visible {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -118,7 +133,7 @@
         <h1>Yeast ITS Identification</h1>
         <p>Upload a tarball of Sanger .Seq files to run the local fungal ITS BLAST pipeline.</p>
 
-        <form action="/run" method="post" enctype="multipart/form-data">
+        <form id="blast-form" action="/run" method="post" enctype="multipart/form-data">
           <label for="tarball">
             Sequence archive
             <input id="tarball" name="tarball" type="file" accept=".tar,.tar.gz,.tgz" required>
@@ -127,11 +142,26 @@
             blastn path
             <input id="blastn_path" name="blastn_path" type="text" value="{{ default_blastn_path }}" placeholder="Leave blank to use blastn from PATH">
           </label>
-          <button type="submit">Run BLAST</button>
+          <button id="run-button" type="submit">Run BLAST</button>
         </form>
+
+        <div id="run-status" class="status" role="status" aria-live="polite">
+          Upload received. BLAST is running; this page will update when the search is finished.
+        </div>
 
         <p class="note">Results are generated from the existing command-line pipeline and written to the repository output folder.</p>
       </section>
     </main>
+    <script>
+      const form = document.getElementById("blast-form");
+      const button = document.getElementById("run-button");
+      const status = document.getElementById("run-status");
+
+      form.addEventListener("submit", () => {
+        status.classList.add("is-visible");
+        button.disabled = true;
+        button.textContent = "Running BLAST...";
+      });
+    </script>
   </body>
 </html>

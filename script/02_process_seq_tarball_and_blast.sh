@@ -31,8 +31,10 @@ mkdir -p "${QUERY_DIR}" "${OUTPUT_DIR}"
 # Naming: Use date prefix and strip common extensions (.tar, .tar.gz)
 DATE_PREFIX="$(date +%Y%m%d)"
 BASE_NAME="$(basename "${INPUT_TAR}")"
-BASE_NO_EXT="${BASE_NAME%.tar*}" 
-DATED_BASE="${DATE_PREFIX}-${BASE_NO_EXT}"
+BASE_NO_EXT="${BASE_NAME%.tar*}"
+# remove the date prefix if the filename already has it
+BASE_NO_DATE="$(echo "${BASE_NO_EXT}" | sed -E 's/^[0-9]{8}-//')"
+DATED_BASE="${DATE_PREFIX}-${BASE_NO_DATE}"
 
 DATED_TAR="${QUERY_DIR}/${DATED_BASE}.tar"
 EXTRACT_DIR="${QUERY_DIR}/${DATED_BASE}_seq_files"
@@ -91,15 +93,24 @@ echo "Running BLAST..."
     -dust no \
     -max_target_seqs 10 \
 	-max_hsps 1 \
-	-outfmt "6 qseqid sseqid pident qcovs evalue bitscore stitle" \
+	-outfmt "6 qseqid sseqid pident qcovs evalue bitscore stitle qstart qend sstart send qseq sseq" \
 	| sort -k1,1 -k6,6gr \
 	| awk -F '\t' '
 BEGIN { OFS="\t" }
 {
-	query=$1; subject_id=$2; pident=$3; qcov=$4; evalue=$5; bitscore=$6; title=$7;
+    query=$1
 
     if (++count[query] > 2)
         next
+
+    print
+}
+' > "${BLAST_OUT}"
+
+awk -F '\t' '
+BEGIN { OFS="\t" }
+{
+	query=$1; subject_id=$2; pident=$3; qcov=$4; evalue=$5; bitscore=$6; title=$7;
 
     species_line = title
     #sub("^" subject_id "[[:space:]]+", "", species_line)
@@ -123,11 +134,12 @@ END {
         print ""
     }
 }
-' > "${SUMMARY_OUT}"
+' "${BLAST_OUT}" > "${SUMMARY_OUT}"
 
 # 6. Optional: Cleanup intermediate extraction folder
 rm -rf "${EXTRACT_DIR}"
 
 echo "Done."
 echo "Combined FASTA: ${FASTA}"
+echo "BLAST table:    ${BLAST_OUT}"
 echo "BLAST summary:  ${SUMMARY_OUT}"
