@@ -27,3 +27,6 @@ output/*
 # Flask/runtime artifacts
 instance/
 .webassets-cache/
+
+# slop-mop working directory (machine-local state)
+.slopmop/
