@@ -30,3 +30,4 @@ instance/
 
 # slop-mop working directory (machine-local state)
 .slopmop/
+.sb_config.json.template
