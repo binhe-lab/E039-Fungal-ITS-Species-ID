@@ -32,3 +32,6 @@ instance/
 .slopmop/
 .sb_config.json.template
 .venv/
+.coverage
+coverage.xml
+.pytest_cache/
