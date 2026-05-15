@@ -234,6 +234,80 @@
         padding-top: 0;
       }
 
+      /* ── Traffic light badges ── */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 6px;
+        border-radius: 99px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .badge::before {
+        content: "";
+        display: block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .badge-species  { background: #dcfce7; color: #15803d; }
+      .badge-species::before  { background: #16a34a; }
+      .badge-probable { background: #fef9c3; color: #a16207; }
+      .badge-probable::before { background: #ca8a04; }
+      .badge-genus    { background: #fee2e2; color: #b91c1c; }
+      .badge-genus::before    { background: #dc2626; }
+      .badge-unknown  { background: #f1f5f9; color: #64748b; }
+      .badge-unknown::before  { background: #94a3b8; }
+
+      /* ── Summary table ── */
+      .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.93rem;
+        margin-bottom: 6px;
+      }
+
+      .summary-table th {
+        text-align: left;
+        padding: 8px 12px;
+        background: var(--field);
+        border-bottom: 2px solid var(--line);
+        font-size: 0.8rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .summary-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+
+      .summary-table tr:last-child td { border-bottom: 0; }
+
+      .summary-table .sample-name {
+        font-family: Menlo, Consolas, monospace;
+        font-size: 0.85rem;
+        color: var(--muted);
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .summary-table .species-name { font-style: italic; font-weight: 700; }
+
+      .footnote {
+        margin-top: 10px;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
       .hit-title {
         margin: 0 0 12px;
         padding: 12px 14px;
@@ -329,7 +403,49 @@
 
         {% if success %}
           <section class="panel">
-            <div class="tabs" role="tablist" aria-label="Result views">
+            <h2>Summary</h2>
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>Sample</th>
+                  <th>Top hit</th>
+                  <th>Identity</th>
+                  <th>Confidence</th>
+                  <th>Runner-up</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in structured_results %}
+                  {% set top = item.hits[0] if item.hits else None %}
+                  {% set second = item.hits[1] if item.hits | length > 1 else None %}
+                  <tr>
+                    <td class="sample-name" title="{{ item.query }}">{{ item.query }}</td>
+                    <td>{% if top %}<span class="species-name">{{ top.species }}</span>{% else %}—{% endif %}</td>
+                    <td>{% if top %}{{ top.percent_identity }}%{% else %}—{% endif %}</td>
+                    <td>
+                      {% if top %}
+                        {% set c = top.confidence %}
+                        <span class="badge badge-{{ c }}">
+                          {% if c == "species" %}Species confirmed
+                          {% elif c == "probable" %}Probable species
+                          {% elif c == "genus" %}Genus-level only
+                          {% else %}Unknown{% endif %}
+                        </span>
+                      {% else %}—{% endif %}
+                    </td>
+                    <td>{% if second %}<em>{{ second.species }}</em> ({{ second.percent_identity }}%){% else %}—{% endif %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p class="footnote">
+              Confidence thresholds: ≥99% = species confirmed (green), 97–99% = probable species (amber), &lt;97% = genus-level only (red).
+              Per Irinyi L et al. (2015) <em>Med Mycol</em> 53(4):313–37.
+            </p>
+          </section>
+        {% endif %}
+
+        {% if success %} role="tablist" aria-label="Result views">
               {% if structured_results %}
                 <button class="tab-button is-active" id="tab-query" type="button" role="tab" aria-selected="true" aria-controls="panel-query" data-tab="query">Per Query</button>
               {% endif %}
@@ -463,9 +579,15 @@
             <a href="#query-hit-${hitIndex + 1}">Hit ${hitIndex + 1}</a>
           `).join("");
 
-          const hits = item.hits.map((hit, hitIndex) => `
+        function confidenceBadge(hit) {
+          const c = hit.confidence ?? "unknown";
+          const labels = { species: "Species confirmed", probable: "Probable species", genus: "Genus-level only", unknown: "Unknown" };
+          return `<span class="badge badge-${escapeText(c)}">${labels[c] ?? "Unknown"}</span>`;
+        }
+
+        const hits = item.hits.map((hit, hitIndex) => `
             <article class="hit" id="query-hit-${hitIndex + 1}">
-              <h3 class="hit-title">Hit ${hitIndex + 1}: <em>${escapeText(hit.species)}</em></h3>
+              <h3 class="hit-title">Hit ${hitIndex + 1}: <em>${escapeText(hit.species)}</em> ${confidenceBadge(hit)}</h3>
               <p>${escapeText(hit.full_reference)}</p>
               <div class="metric-grid">
                 <div class="metric"><span>Identity</span><strong>${escapeText(hit.percent_identity)}%</strong></div>

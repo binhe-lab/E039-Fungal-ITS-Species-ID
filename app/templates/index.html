@@ -106,6 +106,26 @@
         background: var(--accent-dark);
       }
 
+      .db-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .db-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: #aaa;
+      }
+
+      .db-dot.ok { background: #16a34a; }
+      .db-dot.missing { background: #dc2626; }
+
       .note {
         margin-top: 20px;
         font-size: 0.95rem;
@@ -150,6 +170,16 @@
         </div>
 
         <p class="note">Results are generated from the existing command-line pipeline and written to the repository output folder.</p>
+
+        <div class="db-status">
+          {% if db_built_date %}
+            <span class="db-dot ok"></span>
+            BLAST database built <strong>{{ db_built_date }}</strong> — NCBI RefSeq Targeted Loci (fungi ITS)
+          {% else %}
+            <span class="db-dot missing"></span>
+            BLAST database not found — run <code>bash script/01_build_fungal_ITS_blastdb.sh</code> first
+          {% endif %}
+        </div>
       </section>
     </main>
     <script>
