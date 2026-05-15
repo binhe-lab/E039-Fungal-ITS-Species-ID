@@ -127,7 +127,7 @@
         "max_allowed": 0
       },
       "bogus-tests.py": {
-        "enabled": false,
+        "enabled": true,
         "auto_fix": false,
         "run_on": null,
         "extra_exclude_paths": [],
