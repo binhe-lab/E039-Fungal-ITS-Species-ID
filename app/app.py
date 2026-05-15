@@ -48,6 +48,33 @@ def extract_output_path(stdout: str, label: str) -> Path | None:
     return Path(match.group(1).strip())
 
 
+def db_built_date() -> str:
+    marker = REPO_ROOT / "data" / "blastdb" / "fungi_ITS.nhr"
+    if not marker.is_file():
+        return ""
+    import datetime
+
+    ts = marker.stat().st_mtime
+    return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+
+
+# ITS species-level confidence thresholds (Irinyi et al. 2015, Med Mycol 53:313–37)
+_SPECIES_THRESHOLD = 99.0
+_PROBABLE_THRESHOLD = 97.0
+
+
+def confidence_level(percent_identity: str) -> str:
+    try:
+        pct = float(percent_identity)
+    except (ValueError, TypeError):
+        return "unknown"
+    if pct >= _SPECIES_THRESHOLD:
+        return "species"
+    if pct >= _PROBABLE_THRESHOLD:
+        return "probable"
+    return "genus"
+
+
 def default_blastn_path() -> str:
     if os.environ.get("BLASTN_BIN"):
         return os.environ["BLASTN_BIN"]
@@ -105,6 +132,7 @@ def parse_blast_table(blast_table_path: Path | None) -> list[dict]:
             hit = dict(zip(columns, row[: len(columns)]))
             species_words = hit["full_reference"].split()
             hit["species"] = " ".join(species_words[:2])
+            hit["confidence"] = confidence_level(hit["percent_identity"])
             hit["dotted_subject_sequence"] = dotted_subject(
                 hit["query_sequence"], hit["subject_sequence"]
             )
@@ -168,7 +196,7 @@ def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
 
 @app.get("/")
 def index():
-    return render_template("index.html", default_blastn_path=default_blastn_path())
+    return render_template("index.html", default_blastn_path=default_blastn_path(), db_built_date=db_built_date())
 
 
 @app.post("/run")
