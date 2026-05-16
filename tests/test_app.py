@@ -190,8 +190,13 @@ class TestSaveUpload:
         upload.filename = "data.tar"
         upload.save = mock.MagicMock()
         path = save_upload(upload)
-        assert path.name == "data.tar"
-        upload.save.assert_called_once_with(path)
+        try:
+            assert path.name == "data.tar"
+            upload.save.assert_called_once_with(path)
+        finally:
+            import shutil
+
+            shutil.rmtree(path.parent, ignore_errors=True)
 
 
 class TestExtractOutputPath:
@@ -253,6 +258,52 @@ class TestFlaskRoutes:
                 "/run", data=data, content_type="multipart/form-data"
             )
         assert response.status_code == 500
+
+    def test_run_success_renders_summary_table(self):
+        fake_result = {
+            "returncode": 0,
+            "stdout": "BLAST summary: /tmp/s.txt",
+            "stderr": "",
+            "summary_path": Path("/tmp/s.txt"),
+            "blast_table_path": None,
+            "fasta_path": None,
+            "summary_text": "Top hit: Candida albicans",
+            "structured_results": [
+                {
+                    "query": "sample1",
+                    "hits": [
+                        {
+                            "species": "Candida albicans",
+                            "percent_identity": "99.5",
+                            "confidence": "species",
+                            "full_reference": "Candida albicans strain SC5314",
+                            "query_coverage": "100",
+                            "evalue": "0.0",
+                            "bitscore": "1200",
+                            "query_start": "1",
+                            "query_end": "800",
+                            "subject_start": "1",
+                            "subject_end": "800",
+                            "query_sequence": "ACGT",
+                            "subject_sequence": "ACGT",
+                            "dotted_subject_sequence": "....",
+                            "match_line": "||||",
+                            "subject_id": "NR_001",
+                        }
+                    ],
+                }
+            ],
+        }
+        with mock.patch("app.run_pipeline", return_value=fake_result):
+            data = {"tarball": (io.BytesIO(b"fake tar"), "results.tar")}
+            response = self.client.post(
+                "/run", data=data, content_type="multipart/form-data"
+            )
+        assert response.status_code == 200
+        html = response.data.decode()
+        assert "summary-table" in html
+        assert "Candida albicans" in html
+        assert "Species confirmed" in html
 
 
 class TestRunPipeline:
