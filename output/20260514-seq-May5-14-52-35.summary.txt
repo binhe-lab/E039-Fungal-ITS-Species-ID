@@ -1,0 +1,153 @@
+Query: yH103.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 100.000
+    Query coverage: 81%
+    E-value: 0.0
+    Bitscore: 1164
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 89.552
+    Query coverage: 41%
+    E-value: 1.81e-121
+    Bitscore: 434
+
+
+Query: yH101.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 98.185
+    Query coverage: 83%
+    E-value: 0.0
+    Bitscore: 1124
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 85.279
+    Query coverage: 49%
+    E-value: 3.50e-124
+    Bitscore: 443
+
+
+Query: yH745.ITSwhole_oH2593_P1
+  Hit :
+    Species: Cylindricascospora bacillispora
+    Full reference: Cylindricascospora bacillispora NRRL Y-17846 ITS region; from TYPE material
+    % identity: 99.454
+    Query coverage: 91%
+    E-value: 0.0
+    Bitscore: 1298
+  Hit :
+    Species: Kazachstania martiniae
+    Full reference: Kazachstania martiniae CBS 6334 ITS region; from TYPE material
+    % identity: 85.752
+    Query coverage: 47%
+    E-value: 2.07e-114
+    Bitscore: 410
+
+
+Query: yH743.ITSwhole_oH2593_P1
+  Hit :
+    Species: Oligophagozyma castellii
+    Full reference: Oligophagozyma castellii CBS 4332 ITS region; from TYPE material
+    % identity: 99.664
+    Query coverage: 74%
+    E-value: 0.0
+    Bitscore: 1058
+  Hit :
+    Species: Yueomyces sinensis
+    Full reference: Yueomyces sinensis CGMCC 2.1395 ITS region; from TYPE material
+    % identity: 86.969
+    Query coverage: 43%
+    E-value: 3.99e-117
+    Bitscore: 420
+
+
+Query: yH807.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 99.077
+    Query coverage: 81%
+    E-value: 0.0
+    Bitscore: 1140
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 84.949
+    Query coverage: 49%
+    E-value: 1.81e-121
+    Bitscore: 434
+
+
+Query: yH748.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 100.000
+    Query coverage: 88%
+    E-value: 0.0
+    Bitscore: 1274
+  Hit :
+    Species: Nakaseomyces nivariensis
+    Full reference: Nakaseomyces nivariensis CBS 9983 ITS region; from TYPE material
+    % identity: 84.375
+    Query coverage: 58%
+    E-value: 8.23e-145
+    Bitscore: 512
+
+
+Query: yH746.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces delphensis
+    Full reference: Nakaseomyces delphensis CBS 2170 ITS region; from TYPE material
+    % identity: 99.405
+    Query coverage: 84%
+    E-value: 0.0
+    Bitscore: 1185
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 83.077
+    Query coverage: 54%
+    E-value: 4.27e-123
+    Bitscore: 440
+
+
+Query: yH098.ITSwhole_oH2593_P1
+  Hit :
+    Species: Nakaseomyces nivariensis
+    Full reference: Nakaseomyces nivariensis CBS 9983 ITS region; from TYPE material
+    % identity: 97.143
+    Query coverage: 83%
+    E-value: 0.0
+    Bitscore: 1094
+  Hit :
+    Species: Nakaseomyces kungkrabaensis
+    Full reference: Nakaseomyces kungkrabaensis CBS 10927 ITS region; from TYPE material
+    % identity: 96.078
+    Query coverage: 83%
+    E-value: 0.0
+    Bitscore: 1062
+
+
+Query: yH154.ITSwhole_oH2593_P1
+  Hit :
+    Species: Saccharomyces cerevisiae
+    Full reference: Saccharomyces cerevisiae CBS 1171 ITS region; from TYPE material
+    % identity: 98.904
+    Query coverage: 91%
+    E-value: 0.0
+    Bitscore: 1260
+  Hit :
+    Species: Saccharomyces cariocanus
+    Full reference: Saccharomyces cariocanus NRRL 27337 ITS region; from TYPE material
+    % identity: 98.080
+    Query coverage: 91%
+    E-value: 0.0
+    Bitscore: 1234
+
+

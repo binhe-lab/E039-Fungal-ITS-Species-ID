@@ -15,14 +15,15 @@ __pycache__/
 .env.*
 !.env.example
 
-# Generated pipeline data
+# Local BLAST database files are large and reproducible
 data/blastdb/*
 !data/blastdb/.gitkeep
-data/query/*
-!data/query/.gitkeep
-output/*
-!output/.gitkeep
-!output/README.md
+
+# Editor noise inside tracked result folders
+data/query/*.swp
+data/query/*.swo
+output/*.swp
+output/*.swo
 
 # Flask/runtime artifacts
 instance/
