@@ -445,7 +445,9 @@
           </section>
         {% endif %}
 
-        {% if success %} role="tablist" aria-label="Result views">
+        {% if success %}
+          <section class="panel">
+            <div class="tabs" role="tablist" aria-label="Result views">
               {% if structured_results %}
                 <button class="tab-button is-active" id="tab-query" type="button" role="tab" aria-selected="true" aria-controls="panel-query" data-tab="query">Per Query</button>
               {% endif %}
@@ -568,6 +570,12 @@
           return lines.join("\n").trimEnd();
         }
 
+        function confidenceBadge(hit) {
+          const c = hit.confidence ?? "unknown";
+          const labels = { species: "Species confirmed", probable: "Probable species", genus: "Genus-level only", unknown: "Unknown" };
+          return `<span class="badge badge-${escapeText(c)}">${labels[c] ?? "Unknown"}</span>`;
+        }
+
         function renderQuery(index) {
           currentIndex = index;
           const item = results[currentIndex];
@@ -579,13 +587,7 @@
             <a href="#query-hit-${hitIndex + 1}">Hit ${hitIndex + 1}</a>
           `).join("");
 
-        function confidenceBadge(hit) {
-          const c = hit.confidence ?? "unknown";
-          const labels = { species: "Species confirmed", probable: "Probable species", genus: "Genus-level only", unknown: "Unknown" };
-          return `<span class="badge badge-${escapeText(c)}">${labels[c] ?? "Unknown"}</span>`;
-        }
-
-        const hits = item.hits.map((hit, hitIndex) => `
+          const hits = item.hits.map((hit, hitIndex) => `
             <article class="hit" id="query-hit-${hitIndex + 1}">
               <h3 class="hit-title">Hit ${hitIndex + 1}: <em>${escapeText(hit.species)}</em> ${confidenceBadge(hit)}</h3>
               <p>${escapeText(hit.full_reference)}</p>

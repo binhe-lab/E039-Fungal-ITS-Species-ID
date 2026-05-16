@@ -49,7 +49,10 @@ def extract_output_path(stdout: str, label: str) -> Path | None:
 
 
 def db_built_date() -> str:
-    marker = REPO_ROOT / "data" / "blastdb" / "fungi_ITS.nhr"
+    db_dir = REPO_ROOT / "data" / "blastdb"
+    marker = db_dir / "fungi_ITS.nhr"
+    if not marker.is_file():
+        marker = db_dir / "fungi_ITS.00.nhr"
     if not marker.is_file():
         return ""
     import datetime

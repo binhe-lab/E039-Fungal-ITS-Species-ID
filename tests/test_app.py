@@ -349,6 +349,16 @@ class TestDbBuiltDate:
         assert result  # non-empty date string
         assert len(result.split("-")) == 3  # YYYY-MM-DD format
 
+    def test_returns_date_when_split_db_exists(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        db_dir = tmp_path / "data" / "blastdb"
+        db_dir.mkdir(parents=True)
+        marker = db_dir / "fungi_ITS.00.nhr"
+        marker.write_bytes(b"")
+        result = db_built_date()
+        assert result
+        assert len(result.split("-")) == 3
+
 
 class TestDebugMode:
     def test_debug_defaults_to_false(self, monkeypatch):
