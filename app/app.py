@@ -196,7 +196,11 @@ def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
 
 @app.get("/")
 def index():
-    return render_template("index.html", default_blastn_path=default_blastn_path(), db_built_date=db_built_date())
+    return render_template(
+        "index.html",
+        default_blastn_path=default_blastn_path(),
+        db_built_date=db_built_date(),
+    )
 
 
 @app.post("/run")
