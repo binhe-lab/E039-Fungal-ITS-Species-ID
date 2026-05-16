@@ -27,3 +27,11 @@ output/*
 # Flask/runtime artifacts
 instance/
 .webassets-cache/
+
+# slop-mop working directory (machine-local state)
+.slopmop/
+.sb_config.json.template
+.venv/
+.coverage
+coverage.xml
+.pytest_cache/
