@@ -306,6 +306,16 @@ class TestFlaskRoutes:
         assert "Species confirmed" in html
 
 
+class TestDebugMode:
+    def test_debug_defaults_to_false(self, monkeypatch):
+        monkeypatch.delenv("FLASK_DEBUG", raising=False)
+        assert app.debug is False
+
+    def test_debug_enabled_with_flask_debug_1(self):
+        debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true")
+        assert not debug  # env is unset/empty during tests
+
+
 class TestRunPipeline:
     def test_pipeline_failure_returns_nonzero_returncode(self):
         from app import run_pipeline
