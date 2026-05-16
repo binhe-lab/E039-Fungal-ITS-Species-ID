@@ -63,13 +63,18 @@
         margin-top: 32px;
       }
 
+      form.secondary-form {
+        margin-top: 18px;
+      }
+
       label {
         display: grid;
         gap: 8px;
         font-weight: 700;
       }
 
-      input[type="file"] {
+      input[type="file"],
+      select {
         width: 100%;
         min-height: 48px;
         padding: 10px;
@@ -145,6 +150,56 @@
       .status.is-visible {
         display: block;
       }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-top: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tab-button {
+        min-height: 42px;
+        padding: 0 14px;
+        border: 1px solid transparent;
+        border-bottom: 0;
+        border-radius: 6px 6px 0 0;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .tab-button.is-active {
+        border-color: var(--line);
+        background: var(--surface);
+        color: var(--ink);
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.is-active {
+        display: block;
+      }
+
+      .result-meta {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--field);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .result-meta code {
+        color: var(--ink);
+        overflow-wrap: anywhere;
+      }
     </style>
   </head>
   <body>
@@ -153,23 +208,58 @@
         <h1>Yeast ITS Identification</h1>
         <p>Upload a tarball of Sanger .Seq files to run the local fungal ITS BLAST pipeline.</p>
 
-        <form id="blast-form" action="/run" method="post" enctype="multipart/form-data">
-          <label for="tarball">
-            Sequence archive
-            <input id="tarball" name="tarball" type="file" accept=".tar,.tar.gz,.tgz" required>
-          </label>
-          <label for="blastn_path">
-            blastn path
-            <input id="blastn_path" name="blastn_path" type="text" value="{{ default_blastn_path }}" placeholder="Leave blank to use blastn from PATH">
-          </label>
-          <button id="run-button" type="submit">Run BLAST</button>
-        </form>
-
-        <div id="run-status" class="status" role="status" aria-live="polite">
-          Upload received. BLAST is running; this page will update when the search is finished.
+        <div class="tabs" role="tablist" aria-label="Start workflow">
+          <button class="tab-button is-active" id="tab-run" type="button" role="tab" aria-selected="true" aria-controls="panel-run" data-tab="run">Run New BLAST</button>
+          <button class="tab-button" id="tab-open" type="button" role="tab" aria-selected="false" aria-controls="panel-open" data-tab="open">Open Existing Result</button>
         </div>
 
-        <p class="note">Results are generated from the existing command-line pipeline and written to the repository output folder.</p>
+        <div class="tab-panel is-active" id="panel-run" role="tabpanel" aria-labelledby="tab-run" data-panel="run">
+          <form id="blast-form" action="/run" method="post" enctype="multipart/form-data">
+            <label for="tarball">
+              Sequence archive
+              <input id="tarball" name="tarball" type="file" accept=".tar,.tar.gz,.tgz" required>
+            </label>
+            <label for="blastn_path">
+              blastn path
+              <input id="blastn_path" name="blastn_path" type="text" value="{{ default_blastn_path }}" placeholder="Leave blank to use blastn from PATH">
+            </label>
+            <button id="run-button" type="submit">Run BLAST</button>
+          </form>
+
+          <div id="run-status" class="status" role="status" aria-live="polite">
+            Upload received. BLAST is running; this page will update when the search is finished.
+          </div>
+
+          <p class="note">Results are generated from the existing command-line pipeline and written to the repository output folder.</p>
+        </div>
+
+        <div class="tab-panel" id="panel-open" role="tabpanel" aria-labelledby="tab-open" data-panel="open">
+          {% if existing_results %}
+            <form class="secondary-form" action="/open-result" method="post">
+              <label for="result_id">
+                Saved result
+                <select id="result_id" name="result_id" required>
+                  {% for result in existing_results %}
+                    <option
+                      value="{{ result.id }}"
+                      data-summary="{{ result.summary_path or '' }}"
+                      data-blast-table="{{ result.blast_table_path or '' }}"
+                      data-fasta="{{ result.fasta_path or '' }}"
+                      data-structured="{{ 'yes' if result.has_structured_results else 'no' }}"
+                    >
+                      {{ result.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button type="submit">Open Result</button>
+            </form>
+
+            <div class="result-meta" id="result-meta" aria-live="polite"></div>
+          {% else %}
+            <p class="note">No saved BLAST results were found in the output folder.</p>
+          {% endif %}
+        </div>
 
         <div class="db-status">
           {% if db_built_date %}
@@ -186,12 +276,50 @@
       const form = document.getElementById("blast-form");
       const button = document.getElementById("run-button");
       const status = document.getElementById("run-status");
+      const resultSelect = document.getElementById("result_id");
+      const resultMeta = document.getElementById("result-meta");
 
       form.addEventListener("submit", () => {
         status.classList.add("is-visible");
         button.disabled = true;
         button.textContent = "Running BLAST...";
       });
+
+      document.querySelectorAll("[data-tab]").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const selectedTab = tab.dataset.tab;
+          document.querySelectorAll("[data-tab]").forEach((button) => {
+            const isActive = button.dataset.tab === selectedTab;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-selected", String(isActive));
+          });
+          document.querySelectorAll("[data-panel]").forEach((panel) => {
+            panel.classList.toggle("is-active", panel.dataset.panel === selectedTab);
+          });
+        });
+      });
+
+      function renderResultMeta() {
+        if (!resultSelect || !resultMeta) {
+          return;
+        }
+        const option = resultSelect.selectedOptions[0];
+        const rows = [
+          ["Summary", option.dataset.summary],
+          ["BLAST table", option.dataset.blastTable],
+          ["FASTA", option.dataset.fasta],
+          ["Interactive view", option.dataset.structured === "yes" ? "Available" : "Summary only"]
+        ].filter((row) => row[1]);
+
+        resultMeta.innerHTML = rows.map(([label, value]) => (
+          `<div><strong>${label}:</strong> <code>${value}</code></div>`
+        )).join("");
+      }
+
+      if (resultSelect) {
+        resultSelect.addEventListener("change", renderResultMeta);
+        renderResultMeta();
+      }
     </script>
   </body>
 </html>

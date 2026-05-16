@@ -48,7 +48,7 @@ brew install blast curl
 On Linux using conda/mamba:
 
 ```bash
-conda create -n its-blast -c bioconda -c conda-forge blast curl
+conda create -n its-blast -c bioconda -c conda-forge python>=3.10 blast curl
 conda activate its-blast
 ```
 
@@ -76,7 +76,7 @@ The database files will be stored in:
 
 `data/blastdb/`
 
-## Running a query
+## Running a query at the command line
 
 Place a Sanger sequencing .tar archive in:
 
@@ -109,13 +109,20 @@ The script will:
 
 ## Running the web app
 
-The repository also includes a small Flask frontend for uploading a `.tar`,
-`.tar.gz`, or `.tgz` archive and viewing the BLAST summary in a browser.
+The repository also includes a small Flask frontend. Lab members can either
+upload a `.tar`, `.tar.gz`, or `.tgz` archive to run a new BLAST search, or open
+an existing result already stored in `output/`.
 
 Install the Python dependency:
 
 ```bash
 python3 -m pip install -r requirements.txt
+```
+
+(Optional) Run unit testing
+```bash
+python3 -m pip install pytest # if you don't already have pytest
+python3 -m pytest tests/ -v
 ```
 
 Start the app from the repository root:
@@ -142,10 +149,21 @@ Or use the alternate port you selected, for example
 The web app uses the same command-line pipeline script and writes generated
 files to `data/query/` and `output/`.
 
+The home page has two workflows:
+
+- `Run New BLAST`: upload a sequencing tarball and process it through the
+  command-line pipeline.
+- `Open Existing Result`: choose a saved result from `output/` and view it
+  without uploading or rerunning BLAST.
+
 When a run finishes, the results page shows both the plain text BLAST summary
 and a query browser. The query browser lets users move through one query at a
 time with a dropdown or previous/next buttons, and can display aligned query
 and subject sequences with subject identities shown as dots.
+
+Older saved results that only have `output/*.summary.txt` can still be opened
+in the simple output view. Results with matching `output/*.blast.tsv` files also
+support the summary table, per-query browser, and dotted alignment view.
 
 BLAST+ must be available to the process running the web app. Either install
 `blastn` on your default `PATH`, or provide the executable path in the web form.

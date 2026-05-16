@@ -20,9 +20,12 @@ from app import (
     default_blastn_path,
     dotted_subject,
     extract_output_path,
+    list_existing_results,
+    load_existing_result,
     match_line,
     parse_blast_table,
     save_upload,
+    validate_result_id,
 )
 
 
@@ -404,3 +407,113 @@ class TestRunPipeline:
             result = run_pipeline(Path("/fake/archive.tar"))
         assert result["returncode"] == 0
         assert result["summary_text"] == "Top hit: Candida albicans"
+
+
+class TestExistingResults:
+    def _make_blast_row(self) -> str:
+        return "\t".join(
+            [
+                "sample1",
+                "NR_001",
+                "99.5",
+                "100",
+                "0.0",
+                "1200",
+                "Candida albicans strain SC5314",
+                "1",
+                "4",
+                "1",
+                "4",
+                "ACGT",
+                "ACGT",
+            ]
+        )
+
+    def test_validate_result_id_accepts_safe_ids(self):
+        assert validate_result_id("20260514-results_1.2") == "20260514-results_1.2"
+
+    def test_validate_result_id_rejects_path_traversal(self):
+        try:
+            validate_result_id("../secret")
+            assert False, "expected ValueError"
+        except ValueError as exc:
+            assert "valid saved result" in str(exc)
+
+    def test_list_existing_results_includes_summary_and_blast_table(
+        self, tmp_path, monkeypatch
+    ):
+        output_dir = tmp_path / "output"
+        query_dir = tmp_path / "data" / "query"
+        output_dir.mkdir()
+        query_dir.mkdir(parents=True)
+        (output_dir / "20260514-run.summary.txt").write_text("summary")
+        (output_dir / "20260514-run.blast.tsv").write_text(self._make_blast_row())
+        (query_dir / "20260514-run.fasta").write_text(">sample1\nACGT\n")
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+
+        results = list_existing_results()
+
+        assert len(results) == 1
+        assert results[0]["id"] == "20260514-run"
+        assert results[0]["has_structured_results"] is True
+        assert results[0]["fasta_path"] == query_dir / "20260514-run.fasta"
+
+    def test_load_existing_result_supports_summary_only(self, tmp_path, monkeypatch):
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        summary = output_dir / "old-run.summary.txt"
+        summary.write_text("legacy summary")
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+
+        result = load_existing_result("old-run")
+
+        assert result["summary_text"] == "legacy summary"
+        assert result["structured_results"] == []
+        assert result["blast_table_path"] is None
+
+    def test_load_existing_result_parses_blast_table(self, tmp_path, monkeypatch):
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        (output_dir / "new-run.summary.txt").write_text("summary")
+        (output_dir / "new-run.blast.tsv").write_text(self._make_blast_row())
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+
+        result = load_existing_result("new-run")
+
+        assert result["summary_text"] == "summary"
+        assert result["structured_results"][0]["query"] == "sample1"
+
+    def test_load_existing_result_rejects_missing_result(self, tmp_path, monkeypatch):
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+
+        try:
+            load_existing_result("missing")
+            assert False, "expected FileNotFoundError"
+        except FileNotFoundError as exc:
+            assert "not found" in str(exc)
+
+    def test_open_result_route_renders_saved_summary(self, tmp_path, monkeypatch):
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        (output_dir / "saved.summary.txt").write_text("saved summary")
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+
+        app.config["TESTING"] = True
+        client = app.test_client()
+        response = client.post("/open-result", data={"result_id": "saved"})
+
+        assert response.status_code == 200
+        assert "saved summary" in response.data.decode()
+
+    def test_open_result_route_rejects_invalid_id(self):
+        app.config["TESTING"] = True
+        client = app.test_client()
+        response = client.post("/open-result", data={"result_id": "../secret"})
+
+        assert response.status_code == 404

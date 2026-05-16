@@ -17,6 +17,7 @@ PIPELINE_SCRIPT = REPO_ROOT / "script" / "02_process_seq_tarball_and_blast.sh"
 OUTPUT_DIR = REPO_ROOT / "output"
 ALLOWED_EXTENSIONS = (".tar", ".tar.gz", ".tgz")
 LOCAL_BLASTN = Path("/usr/local/ncbi/blast/bin/blastn")
+RESULT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 app = Flask(__name__)
@@ -157,6 +158,76 @@ def parse_blast_table(blast_table_path: Path | None) -> list[dict]:
     return queries
 
 
+def list_existing_results() -> list[dict[str, object]]:
+    results = []
+    seen_ids = set()
+    for summary_path in sorted(OUTPUT_DIR.glob("*.summary.txt"), reverse=True):
+        result_id = summary_path.name.removesuffix(".summary.txt")
+        seen_ids.add(result_id)
+        blast_table_path = OUTPUT_DIR / f"{result_id}.blast.tsv"
+        fasta_path = REPO_ROOT / "data" / "query" / f"{result_id}.fasta"
+        results.append(
+            {
+                "id": result_id,
+                "label": result_id,
+                "summary_path": summary_path,
+                "blast_table_path": blast_table_path if blast_table_path.is_file() else None,
+                "fasta_path": fasta_path if fasta_path.is_file() else None,
+                "has_structured_results": blast_table_path.is_file(),
+            }
+        )
+
+    for blast_table_path in sorted(OUTPUT_DIR.glob("*.blast.tsv"), reverse=True):
+        result_id = blast_table_path.name.removesuffix(".blast.tsv")
+        if result_id in seen_ids:
+            continue
+        fasta_path = REPO_ROOT / "data" / "query" / f"{result_id}.fasta"
+        results.append(
+            {
+                "id": result_id,
+                "label": result_id,
+                "summary_path": None,
+                "blast_table_path": blast_table_path,
+                "fasta_path": fasta_path if fasta_path.is_file() else None,
+                "has_structured_results": True,
+            }
+        )
+
+    return results
+
+
+def validate_result_id(result_id: str) -> str:
+    clean_id = result_id.strip()
+    if not RESULT_ID_PATTERN.fullmatch(clean_id):
+        raise ValueError("Choose a valid saved result.")
+    return clean_id
+
+
+def load_existing_result(result_id: str) -> dict[str, object]:
+    clean_id = validate_result_id(result_id)
+    summary_path = OUTPUT_DIR / f"{clean_id}.summary.txt"
+    blast_table_path = OUTPUT_DIR / f"{clean_id}.blast.tsv"
+    fasta_path = REPO_ROOT / "data" / "query" / f"{clean_id}.fasta"
+
+    has_summary = summary_path.is_file()
+    has_blast_table = blast_table_path.is_file()
+    if not has_summary and not has_blast_table:
+        raise FileNotFoundError("Saved result not found.")
+
+    return {
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "",
+        "summary_path": summary_path if has_summary else None,
+        "blast_table_path": blast_table_path if has_blast_table else None,
+        "fasta_path": fasta_path if fasta_path.is_file() else None,
+        "summary_text": summary_path.read_text(encoding="utf-8") if has_summary else "",
+        "structured_results": parse_blast_table(blast_table_path)
+        if has_blast_table
+        else [],
+    }
+
+
 def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
     env = os.environ.copy()
     if blastn_path:
@@ -203,6 +274,7 @@ def index():
         "index.html",
         default_blastn_path=default_blastn_path(),
         db_built_date=db_built_date(),
+        existing_results=list_existing_results(),
     )
 
 
@@ -249,7 +321,42 @@ def run():
         fasta_path=result["fasta_path"],
         blastn_path=blastn_path,
         output_dir=OUTPUT_DIR,
+        result_source="new",
     ), (200 if success else 500)
+
+
+@app.post("/open-result")
+def open_result():
+    result_id = request.form.get("result_id", "")
+    try:
+        result = load_existing_result(result_id)
+    except Exception as exc:
+        return (
+            render_template(
+                "results.html",
+                success=False,
+                error=str(exc),
+                stdout="",
+                stderr="",
+            ),
+            404,
+        )
+
+    return render_template(
+        "results.html",
+        success=True,
+        error=None,
+        stdout="",
+        stderr="",
+        summary_text=result["summary_text"],
+        structured_results=result["structured_results"],
+        summary_path=result["summary_path"],
+        blast_table_path=result["blast_table_path"],
+        fasta_path=result["fasta_path"],
+        blastn_path="",
+        output_dir=OUTPUT_DIR,
+        result_source="existing",
+    )
 
 
 if __name__ == "__main__":

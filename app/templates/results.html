@@ -387,7 +387,11 @@
   <body>
     <main>
       <div class="topbar">
-        <h1>{% if success %}BLAST Results{% else %}Pipeline Error{% endif %}</h1>
+        <h1>
+          {% if success and result_source == "existing" %}Saved BLAST Results
+          {% elif success %}BLAST Results
+          {% else %}Pipeline Error{% endif %}
+        </h1>
         <a href="/">Run another archive</a>
       </div>
 
@@ -401,7 +405,7 @@
           </section>
         {% endif %}
 
-        {% if success %}
+        {% if success and structured_results %}
           <section class="panel">
             <h2>Summary</h2>
             <table class="summary-table">
