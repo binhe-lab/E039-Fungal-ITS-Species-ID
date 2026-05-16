@@ -15,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 from app import (
     allowed_file,
     app,
+    confidence_level,
+    db_built_date,
     default_blastn_path,
     dotted_subject,
     extract_output_path,
@@ -67,8 +69,7 @@ class TestMatchLine:
         assert match_line("AAAA", "TTTT") == "    "
 
     def test_partial_match(self):
-        assert match_line("ACGT", "ACGG") == "|||  "[:4]
-        assert match_line("ACGT", "ACGG") == "|||" + " "
+        assert match_line("ACGT", "ACGG") == "||| "
 
     def test_gap_is_not_match(self):
         assert match_line("-CGT", "-CGT") == " |||"
@@ -252,11 +253,15 @@ class TestFlaskRoutes:
             "summary_text": None,
             "structured_results": [],
         }
-        with mock.patch("app.run_pipeline", return_value=fake_result):
+        with mock.patch("app.run_pipeline", return_value=fake_result) as mp:
             data = {"tarball": (io.BytesIO(b"fake tar content"), "results.tar")}
             response = self.client.post(
                 "/run", data=data, content_type="multipart/form-data"
             )
+            upload_path = mp.call_args[0][0]
+        import shutil
+
+        shutil.rmtree(upload_path.parent, ignore_errors=True)
         assert response.status_code == 500
 
     def test_run_success_renders_summary_table(self):
@@ -304,6 +309,45 @@ class TestFlaskRoutes:
         assert "summary-table" in html
         assert "Candida albicans" in html
         assert "Species confirmed" in html
+
+
+class TestConfidenceLevel:
+    def test_species_at_99(self):
+        assert confidence_level("99.0") == "species"
+
+    def test_species_above_99(self):
+        assert confidence_level("100.0") == "species"
+
+    def test_probable_at_97(self):
+        assert confidence_level("97.0") == "probable"
+
+    def test_probable_between_97_and_99(self):
+        assert confidence_level("98.5") == "probable"
+
+    def test_genus_below_97(self):
+        assert confidence_level("96.9") == "genus"
+
+    def test_unknown_on_invalid(self):
+        assert confidence_level("not_a_number") == "unknown"
+
+    def test_unknown_on_none(self):
+        assert confidence_level(None) == "unknown"
+
+
+class TestDbBuiltDate:
+    def test_returns_empty_when_marker_missing(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        assert db_built_date() == ""
+
+    def test_returns_date_when_nhr_exists(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        db_dir = tmp_path / "data" / "blastdb"
+        db_dir.mkdir(parents=True)
+        marker = db_dir / "fungi_ITS.nhr"
+        marker.write_bytes(b"")
+        result = db_built_date()
+        assert result  # non-empty date string
+        assert len(result.split("-")) == 3  # YYYY-MM-DD format
 
 
 class TestDebugMode:
