@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import csv
+import datetime
+import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 
 from flask import Flask, render_template, request
@@ -15,9 +19,12 @@ APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parent
 PIPELINE_SCRIPT = REPO_ROOT / "script" / "02_process_seq_tarball_and_blast.sh"
 OUTPUT_DIR = REPO_ROOT / "output"
+QUERY_DIR = REPO_ROOT / "data" / "query"
+STAGING_ROOT = REPO_ROOT / ".app_runs"
 ALLOWED_EXTENSIONS = (".tar", ".tar.gz", ".tgz")
 LOCAL_BLASTN = Path("/usr/local/ncbi/blast/bin/blastn")
 RESULT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 app = Flask(__name__)
@@ -47,6 +54,49 @@ def extract_output_path(stdout: str, label: str) -> Path | None:
     if not match:
         return None
     return Path(match.group(1).strip())
+
+
+def strip_tar_extension(filename: str) -> str:
+    lower_name = filename.lower()
+    if lower_name.endswith(".tar.gz"):
+        return filename[:-7]
+    if lower_name.endswith(".tgz"):
+        return filename[:-4]
+    if lower_name.endswith(".tar"):
+        return filename[:-4]
+    return Path(filename).stem
+
+
+def strip_leading_date(value: str) -> str:
+    return re.sub(r"^[0-9]{8}-", "", value)
+
+
+def staging_dir(run_id: str) -> Path:
+    if not RUN_ID_PATTERN.fullmatch(run_id):
+        raise ValueError("Choose a valid staged run.")
+    return STAGING_ROOT / run_id
+
+
+def new_run_id() -> str:
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"{timestamp}-{uuid.uuid4().hex[:8]}"
+
+
+def manifest_path(run_id: str) -> Path:
+    return staging_dir(run_id) / "manifest.json"
+
+
+def write_manifest(run_id: str, data: dict[str, object]) -> None:
+    path = manifest_path(run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def read_manifest(run_id: str) -> dict[str, object]:
+    path = manifest_path(run_id)
+    if not path.is_file():
+        raise FileNotFoundError("Staged run not found.")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def db_built_date() -> str:
@@ -165,7 +215,7 @@ def list_existing_results() -> list[dict[str, object]]:
         result_id = summary_path.name.removesuffix(".summary.txt")
         seen_ids.add(result_id)
         blast_table_path = OUTPUT_DIR / f"{result_id}.blast.tsv"
-        fasta_path = REPO_ROOT / "data" / "query" / f"{result_id}.fasta"
+        fasta_path = QUERY_DIR / f"{result_id}.fasta"
         results.append(
             {
                 "id": result_id,
@@ -181,7 +231,7 @@ def list_existing_results() -> list[dict[str, object]]:
         result_id = blast_table_path.name.removesuffix(".blast.tsv")
         if result_id in seen_ids:
             continue
-        fasta_path = REPO_ROOT / "data" / "query" / f"{result_id}.fasta"
+        fasta_path = QUERY_DIR / f"{result_id}.fasta"
         results.append(
             {
                 "id": result_id,
@@ -207,7 +257,7 @@ def load_existing_result(result_id: str) -> dict[str, object]:
     clean_id = validate_result_id(result_id)
     summary_path = OUTPUT_DIR / f"{clean_id}.summary.txt"
     blast_table_path = OUTPUT_DIR / f"{clean_id}.blast.tsv"
-    fasta_path = REPO_ROOT / "data" / "query" / f"{clean_id}.fasta"
+    fasta_path = QUERY_DIR / f"{clean_id}.fasta"
 
     has_summary = summary_path.is_file()
     has_blast_table = blast_table_path.is_file()
@@ -228,10 +278,19 @@ def load_existing_result(result_id: str) -> dict[str, object]:
     }
 
 
-def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
+def run_pipeline(
+    upload_path: Path,
+    blastn_path: str = "",
+    query_dir: Path | None = None,
+    output_dir: Path | None = None,
+) -> dict[str, object]:
     env = os.environ.copy()
     if blastn_path:
         env["BLASTN_BIN"] = blastn_path
+    if query_dir is not None:
+        env["QUERY_DIR"] = str(query_dir)
+    if output_dir is not None:
+        env["OUTPUT_DIR"] = str(output_dir)
 
     completed = subprocess.run(
         ["bash", str(PIPELINE_SCRIPT), str(upload_path)],
@@ -268,6 +327,86 @@ def run_pipeline(upload_path: Path, blastn_path: str = "") -> dict[str, object]:
     }
 
 
+def run_staged_pipeline(
+    upload_path: Path, original_filename: str, blastn_path: str = ""
+) -> dict[str, object]:
+    run_id = new_run_id()
+    run_dir = staging_dir(run_id)
+    query_dir = run_dir / "query"
+    output_dir = run_dir / "output"
+    result = run_pipeline(upload_path, blastn_path, query_dir=query_dir, output_dir=output_dir)
+
+    if result["returncode"] == 0:
+        manifest = {
+            "run_id": run_id,
+            "original_filename": secure_filename(original_filename),
+            "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            "input_tar": str(extract_output_path(result["stdout"], "Input tarball"))
+            if extract_output_path(result["stdout"], "Input tarball")
+            else "",
+            "fasta_path": str(result["fasta_path"] or ""),
+            "blast_table_path": str(result["blast_table_path"] or ""),
+            "summary_path": str(result["summary_path"] or ""),
+            "saved": False,
+        }
+        # Older script output did not include the staged input tarball path, so
+        # keep a fallback for manifests produced during development.
+        if not manifest["input_tar"] and result["fasta_path"]:
+            manifest["input_tar"] = str(query_dir / f"{Path(result['fasta_path']).stem}.tar")
+        write_manifest(run_id, manifest)
+        result["run_id"] = run_id
+        result["saved"] = False
+
+    return result
+
+
+def save_staged_result(run_id: str) -> dict[str, object]:
+    manifest = read_manifest(run_id)
+    if manifest.get("saved"):
+        raise ValueError("This result has already been saved.")
+
+    original_filename = str(manifest.get("original_filename", "result.tar"))
+    original_base = strip_leading_date(strip_tar_extension(original_filename))
+    date_prefix = datetime.datetime.now().strftime("%Y%m%d")
+    final_base = f"{date_prefix}-{original_base}"
+
+    sources = {
+        "input_tar": Path(str(manifest.get("input_tar", ""))),
+        "fasta_path": Path(str(manifest.get("fasta_path", ""))),
+        "blast_table_path": Path(str(manifest.get("blast_table_path", ""))),
+        "summary_path": Path(str(manifest.get("summary_path", ""))),
+    }
+    targets = {
+        "input_tar": QUERY_DIR / f"{final_base}.tar",
+        "fasta_path": QUERY_DIR / f"{final_base}.fasta",
+        "blast_table_path": OUTPUT_DIR / f"{final_base}.blast.tsv",
+        "summary_path": OUTPUT_DIR / f"{final_base}.summary.txt",
+    }
+
+    for label, source in sources.items():
+        if not source.is_file():
+            raise FileNotFoundError(f"Cannot save result because {label} is missing.")
+    conflicts = [target for target in targets.values() if target.exists()]
+    if conflicts:
+        conflict_names = ", ".join(str(path) for path in conflicts)
+        raise FileExistsError(f"Saved record already exists: {conflict_names}")
+
+    QUERY_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for label, source in sources.items():
+        shutil.move(str(source), str(targets[label]))
+
+    manifest["saved"] = True
+    manifest["saved_result_id"] = final_base
+    manifest["saved_paths"] = {key: str(path) for key, path in targets.items()}
+    write_manifest(run_id, manifest)
+
+    return load_existing_result(final_base) | {
+        "result_id": final_base,
+        "saved_paths": targets,
+    }
+
+
 @app.get("/")
 def index():
     return render_template(
@@ -294,7 +433,7 @@ def run():
     try:
         upload_path = save_upload(upload)
         blastn_path = request.form.get("blastn_path", "").strip()
-        result = run_pipeline(upload_path, blastn_path)
+        result = run_staged_pipeline(upload_path, upload.filename or "", blastn_path)
     except Exception as exc:
         return (
             render_template(
@@ -322,6 +461,9 @@ def run():
         blastn_path=blastn_path,
         output_dir=OUTPUT_DIR,
         result_source="new",
+        run_id=result.get("run_id"),
+        saved=result.get("saved", False),
+        save_error=None,
     ), (200 if success else 500)
 
 
@@ -356,6 +498,46 @@ def open_result():
         blastn_path="",
         output_dir=OUTPUT_DIR,
         result_source="existing",
+        run_id=None,
+        saved=True,
+        save_error=None,
+    )
+
+
+@app.post("/save-result")
+def save_result():
+    run_id = request.form.get("run_id", "")
+    try:
+        result = save_staged_result(run_id)
+    except Exception as exc:
+        return (
+            render_template(
+                "results.html",
+                success=False,
+                error=str(exc),
+                stdout="",
+                stderr="",
+            ),
+            400,
+        )
+
+    return render_template(
+        "results.html",
+        success=True,
+        error=None,
+        stdout="Saved result to data/query/ and output/.",
+        stderr="",
+        summary_text=result["summary_text"],
+        structured_results=result["structured_results"],
+        summary_path=result["summary_path"],
+        blast_table_path=result["blast_table_path"],
+        fasta_path=result["fasta_path"],
+        blastn_path="",
+        output_dir=OUTPUT_DIR,
+        result_source="saved",
+        run_id=None,
+        saved=True,
+        save_error=None,
     )
 
 

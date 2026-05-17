@@ -24,8 +24,12 @@ from app import (
     load_existing_result,
     match_line,
     parse_blast_table,
+    save_staged_result,
     save_upload,
+    strip_leading_date,
+    strip_tar_extension,
     validate_result_id,
+    write_manifest,
 )
 
 
@@ -256,7 +260,7 @@ class TestFlaskRoutes:
             "summary_text": None,
             "structured_results": [],
         }
-        with mock.patch("app.run_pipeline", return_value=fake_result) as mp:
+        with mock.patch("app.run_staged_pipeline", return_value=fake_result) as mp:
             data = {"tarball": (io.BytesIO(b"fake tar content"), "results.tar")}
             response = self.client.post(
                 "/run", data=data, content_type="multipart/form-data"
@@ -276,6 +280,8 @@ class TestFlaskRoutes:
             "blast_table_path": None,
             "fasta_path": None,
             "summary_text": "Top hit: Candida albicans",
+            "run_id": "run-1",
+            "saved": False,
             "structured_results": [
                 {
                     "query": "sample1",
@@ -302,7 +308,7 @@ class TestFlaskRoutes:
                 }
             ],
         }
-        with mock.patch("app.run_pipeline", return_value=fake_result):
+        with mock.patch("app.run_staged_pipeline", return_value=fake_result):
             data = {"tarball": (io.BytesIO(b"fake tar"), "results.tar")}
             response = self.client.post(
                 "/run", data=data, content_type="multipart/form-data"
@@ -409,6 +415,128 @@ class TestRunPipeline:
         assert result["summary_text"] == "Top hit: Candida albicans"
 
 
+class TestStagedSaving:
+    def test_strip_tar_extension(self):
+        assert strip_tar_extension("sample.tar") == "sample"
+        assert strip_tar_extension("sample.tar.gz") == "sample"
+        assert strip_tar_extension("sample.tgz") == "sample"
+
+    def test_strip_leading_date(self):
+        assert strip_leading_date("20260517-sample") == "sample"
+        assert strip_leading_date("sample") == "sample"
+
+    def test_run_pipeline_passes_staging_directories(self, tmp_path):
+        from app import run_pipeline
+
+        summary = tmp_path / "results.summary.txt"
+        summary.write_text("summary")
+        blast_table = tmp_path / "results.blast.tsv"
+        blast_table.write_text("")
+        fasta = tmp_path / "results.fasta"
+        stdout = (
+            f"BLAST summary: {summary}\n"
+            f"BLAST table: {blast_table}\n"
+            f"Combined FASTA: {fasta}\n"
+        )
+        with mock.patch("app.subprocess.run") as mock_run:
+            mock_run.return_value = mock.MagicMock(
+                returncode=0, stdout=stdout, stderr=""
+            )
+            run_pipeline(
+                Path("/fake/archive.tar"),
+                query_dir=tmp_path / "query",
+                output_dir=tmp_path / "output",
+            )
+        env = mock_run.call_args.kwargs["env"]
+        assert env["QUERY_DIR"] == str(tmp_path / "query")
+        assert env["OUTPUT_DIR"] == str(tmp_path / "output")
+
+    def test_save_staged_result_moves_files(self, tmp_path, monkeypatch):
+        staging_root = tmp_path / ".app_runs"
+        query_dir = tmp_path / "data" / "query"
+        output_dir = tmp_path / "output"
+        monkeypatch.setattr("app.STAGING_ROOT", staging_root)
+        monkeypatch.setattr("app.QUERY_DIR", query_dir)
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+
+        run_dir = staging_root / "run1"
+        staged_query = run_dir / "query"
+        staged_output = run_dir / "output"
+        staged_query.mkdir(parents=True)
+        staged_output.mkdir()
+        input_tar = staged_query / "20260517-original.tar"
+        fasta = staged_query / "20260517-original.fasta"
+        blast = staged_output / "20260517-original.blast.tsv"
+        summary = staged_output / "20260517-original.summary.txt"
+        input_tar.write_bytes(b"tar")
+        fasta.write_text(">sample\nACGT\n")
+        blast.write_text("")
+        summary.write_text("summary")
+        write_manifest(
+            "run1",
+            {
+                "original_filename": "original.tar",
+                "input_tar": str(input_tar),
+                "fasta_path": str(fasta),
+                "blast_table_path": str(blast),
+                "summary_path": str(summary),
+                "saved": False,
+            },
+        )
+
+        result = save_staged_result("run1")
+
+        assert result["result_id"].endswith("-original")
+        assert (query_dir / f"{result['result_id']}.tar").is_file()
+        assert (query_dir / f"{result['result_id']}.fasta").is_file()
+        assert (output_dir / f"{result['result_id']}.blast.tsv").is_file()
+        assert (output_dir / f"{result['result_id']}.summary.txt").is_file()
+
+    def test_save_staged_result_refuses_conflict(self, tmp_path, monkeypatch):
+        staging_root = tmp_path / ".app_runs"
+        query_dir = tmp_path / "data" / "query"
+        output_dir = tmp_path / "output"
+        monkeypatch.setattr("app.STAGING_ROOT", staging_root)
+        monkeypatch.setattr("app.QUERY_DIR", query_dir)
+        monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
+
+        date_prefix = __import__("datetime").datetime.now().strftime("%Y%m%d")
+        query_dir.mkdir(parents=True)
+        output_dir.mkdir()
+        (query_dir / f"{date_prefix}-original.tar").write_bytes(b"existing")
+
+        run_dir = staging_root / "run1"
+        staged_query = run_dir / "query"
+        staged_output = run_dir / "output"
+        staged_query.mkdir(parents=True)
+        staged_output.mkdir()
+        input_tar = staged_query / "source.tar"
+        fasta = staged_query / "source.fasta"
+        blast = staged_output / "source.blast.tsv"
+        summary = staged_output / "source.summary.txt"
+        input_tar.write_bytes(b"tar")
+        fasta.write_text(">sample\nACGT\n")
+        blast.write_text("")
+        summary.write_text("summary")
+        write_manifest(
+            "run1",
+            {
+                "original_filename": "original.tar",
+                "input_tar": str(input_tar),
+                "fasta_path": str(fasta),
+                "blast_table_path": str(blast),
+                "summary_path": str(summary),
+                "saved": False,
+            },
+        )
+
+        try:
+            save_staged_result("run1")
+            assert False, "expected FileExistsError"
+        except FileExistsError as exc:
+            assert "already exists" in str(exc)
+
+
 class TestExistingResults:
     def _make_blast_row(self) -> str:
         return "\t".join(
@@ -451,6 +579,7 @@ class TestExistingResults:
         (query_dir / "20260514-run.fasta").write_text(">sample1\nACGT\n")
         monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
         monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        monkeypatch.setattr("app.QUERY_DIR", query_dir)
 
         results = list_existing_results()
 
@@ -466,6 +595,7 @@ class TestExistingResults:
         summary.write_text("legacy summary")
         monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
         monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        monkeypatch.setattr("app.QUERY_DIR", tmp_path / "data" / "query")
 
         result = load_existing_result("old-run")
 
@@ -480,6 +610,7 @@ class TestExistingResults:
         (output_dir / "new-run.blast.tsv").write_text(self._make_blast_row())
         monkeypatch.setattr("app.OUTPUT_DIR", output_dir)
         monkeypatch.setattr("app.REPO_ROOT", tmp_path)
+        monkeypatch.setattr("app.QUERY_DIR", tmp_path / "data" / "query")
 
         result = load_existing_result("new-run")
 

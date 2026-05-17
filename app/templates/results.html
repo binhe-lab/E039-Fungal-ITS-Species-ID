@@ -308,6 +308,49 @@
         color: var(--muted);
       }
 
+      .save-panel {
+        border-color: #bdd8d3;
+        background: #f6fbfa;
+      }
+
+      .save-form {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        margin-top: 12px;
+      }
+
+      .save-form button {
+        min-height: 42px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .help-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: var(--surface);
+        color: var(--accent-dark);
+        font-weight: 700;
+        cursor: help;
+      }
+
+      .save-note {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
       .hit-title {
         margin: 0 0 12px;
         padding: 12px 14px;
@@ -369,7 +412,8 @@
 
       @media (max-width: 760px) {
         .topbar,
-        .controls {
+        .controls,
+        .save-form {
           grid-template-columns: 1fr;
           align-items: stretch;
         }
@@ -446,6 +490,24 @@
               Confidence thresholds: ≥99% = species confirmed (green), 97–&lt;99% = probable species (amber), &lt;97% = genus-level only (red).
               Per Irinyi L et al. (2015) <em>Med Mycol</em> 53(4):313–37.
             </p>
+          </section>
+        {% endif %}
+
+        {% if success and result_source == "new" and run_id and not saved %}
+          <section class="panel save-panel">
+            <h2>Temporary result</h2>
+            <p>This input and its BLAST results are not tracked in Git yet.</p>
+            <form class="save-form" action="/save-result" method="post">
+              <input type="hidden" name="run_id" value="{{ run_id }}">
+              <button type="submit">Save this result</button>
+              <span class="help-dot" tabindex="0" title="Save the input file and BLAST results in data/query/ and output/ so they can be committed to the repository for future reference.">?</span>
+              <p class="save-note">Save moves the uploaded tarball, FASTA, BLAST table, and summary into the tracked lab-record folders.</p>
+            </form>
+          </section>
+        {% elif success and saved and result_source == "saved" %}
+          <section class="panel save-panel">
+            <h2>Result saved</h2>
+            <p>This input and its BLAST results are now in <code>data/query/</code> and <code>output/</code>.</p>
           </section>
         {% endif %}
 

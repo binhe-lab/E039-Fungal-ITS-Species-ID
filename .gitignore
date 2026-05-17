@@ -28,3 +28,4 @@ output/*.swo
 # Flask/runtime artifacts
 instance/
 .webassets-cache/
+.app_runs/

@@ -152,7 +152,8 @@ files to `data/query/` and `output/`.
 The home page has two workflows:
 
 - `Run New BLAST`: upload a sequencing tarball and process it through the
-  command-line pipeline.
+  command-line pipeline. New web runs are first written to an ignored staging
+  folder so test runs do not automatically become Git-tracked lab records.
 - `Open Existing Result`: choose a saved result from `output/` and view it
   without uploading or rerunning BLAST.
 
@@ -164,6 +165,19 @@ and subject sequences with subject identities shown as dots.
 Older saved results that only have `output/*.summary.txt` can still be opened
 in the simple output view. Results with matching `output/*.blast.tsv` files also
 support the summary table, per-query browser, and dotted alignment view.
+
+To keep a new web run as a lab record, use `Save this result` on the results
+page. The app then moves the staged input and outputs into:
+
+```text
+data/query/YYYYMMDD-original-input-name.tar
+data/query/YYYYMMDD-original-input-name.fasta
+output/YYYYMMDD-original-input-name.blast.tsv
+output/YYYYMMDD-original-input-name.summary.txt
+```
+
+The app refuses to overwrite existing saved records. Saving only moves files
+into Git-trackable folders; it does not run `git add` or create a commit.
 
 BLAST+ must be available to the process running the web app. Either install
 `blastn` on your default `PATH`, or provide the executable path in the web form.

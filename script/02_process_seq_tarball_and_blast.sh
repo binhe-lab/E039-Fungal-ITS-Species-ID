@@ -21,8 +21,8 @@ INPUT_TAR="$1"
 
 # 2. Directory & Path Setup
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-QUERY_DIR="${REPO_ROOT}/data/query"
-OUTPUT_DIR="${REPO_ROOT}/output"
+QUERY_DIR="${QUERY_DIR:-${REPO_ROOT}/data/query}"
+OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/output}"
 DB_PREFIX="${REPO_ROOT}/data/blastdb/fungi_ITS"
 BLASTN_BIN="${BLASTN_BIN:-blastn}"
 
@@ -140,6 +140,7 @@ END {
 rm -rf "${EXTRACT_DIR}"
 
 echo "Done."
+echo "Input tarball:  ${DATED_TAR}"
 echo "Combined FASTA: ${FASTA}"
 echo "BLAST table:    ${BLAST_OUT}"
 echo "BLAST summary:  ${SUMMARY_OUT}"
