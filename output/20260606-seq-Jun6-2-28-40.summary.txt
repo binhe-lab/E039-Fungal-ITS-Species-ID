@@ -1,0 +1,153 @@
+Query: yH641.ITSwhole_oH2693_P1
+  Hit :
+    Species: Saccharomyces cerevisiae
+    Full reference: Saccharomyces cerevisiae CBS 1171 ITS region; from TYPE material
+    % identity: 99.593
+    Query coverage: 92%
+    E-value: 0.0
+    Bitscore: 1306
+  Hit :
+    Species: Saccharomyces mikatae
+    Full reference: Saccharomyces mikatae ATCC MYA-4448 ITS region; from TYPE material
+    % identity: 97.523
+    Query coverage: 96%
+    E-value: 0.0
+    Bitscore: 1285
+
+
+Query: yH149.ITSwhole_oH2693_P1
+  Hit :
+    Species: Kluyveromyces lactis
+    Full reference: Kluyveromyces lactis CBS 683 ITS region; from TYPE material
+    % identity: 100.000
+    Query coverage: 80%
+    E-value: 0.0
+    Bitscore: 1160
+  Hit :
+    Species: Kluyveromyces dobzhanskii
+    Full reference: Kluyveromyces dobzhanskii IFO 10603 ITS region; from TYPE material
+    % identity: 96.563
+    Query coverage: 76%
+    E-value: 0.0
+    Bitscore: 998
+
+
+Query: yH145.ITSwhole_oH2693_P1
+  Hit :
+    Species: Saccharomyces cerevisiae
+    Full reference: Saccharomyces cerevisiae CBS 1171 ITS region; from TYPE material
+    % identity: 99.591
+    Query coverage: 92%
+    E-value: 0.0
+    Bitscore: 1298
+  Hit :
+    Species: Saccharomyces cariocanus
+    Full reference: Saccharomyces cariocanus NRRL 27337 ITS region; from TYPE material
+    % identity: 98.770
+    Query coverage: 91%
+    E-value: 0.0
+    Bitscore: 1273
+
+
+Query: yH103.ITSwhole2_oH2693_P1
+  Hit :
+    Species: Kluyveromyces lactis
+    Full reference: Kluyveromyces lactis CBS 683 ITS region; from TYPE material
+    % identity: 99.531
+    Query coverage: 80%
+    E-value: 0.0
+    Bitscore: 1134
+  Hit :
+    Species: Kluyveromyces dobzhanskii
+    Full reference: Kluyveromyces dobzhanskii IFO 10603 ITS region; from TYPE material
+    % identity: 96.236
+    Query coverage: 76%
+    E-value: 0.0
+    Bitscore: 982
+
+
+Query: yH793.ITSwhole_oH2693_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 96.031
+    Query coverage: 82%
+    E-value: 0.0
+    Bitscore: 1059
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 88.724
+    Query coverage: 42%
+    E-value: 2.69e-119
+    Bitscore: 426
+
+
+Query: yH791.ITSwhole_oH2693_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 99.234
+    Query coverage: 82%
+    E-value: 0.0
+    Bitscore: 1153
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 89.021
+    Query coverage: 42%
+    E-value: 2.21e-120
+    Bitscore: 431
+
+
+Query: yH098.ITSwhole2_oH2693_P1
+  Hit :
+    Species: Nakaseomyces nivariensis
+    Full reference: Nakaseomyces nivariensis CBS 9983 ITS region; from TYPE material
+    % identity: 97.950
+    Query coverage: 85%
+    E-value: 0.0
+    Bitscore: 1156
+  Hit :
+    Species: Nakaseomyces kungkrabaensis
+    Full reference: Nakaseomyces kungkrabaensis CBS 10927 ITS region; from TYPE material
+    % identity: 97.130
+    Query coverage: 83%
+    E-value: 0.0
+    Bitscore: 1098
+
+
+Query: yH1074.ITSwhole_oH2693_P1
+  Hit :
+    Species: Nakaseomyces glabratus
+    Full reference: Nakaseomyces glabratus NRRL Y-65 ITS region; from TYPE material
+    % identity: 100.000
+    Query coverage: 81%
+    E-value: 0.0
+    Bitscore: 1175
+  Hit :
+    Species: Nakaseomyces bracarensis
+    Full reference: Nakaseomyces bracarensis CBS 10154 ITS region; from TYPE material
+    % identity: 89.552
+    Query coverage: 41%
+    E-value: 1.81e-121
+    Bitscore: 434
+
+
+Query: yH545.ITSwhole_oH2693_P1
+  Hit :
+    Species: Saccharomyces cerevisiae
+    Full reference: Saccharomyces cerevisiae CBS 1171 ITS region; from TYPE material
+    % identity: 99.593
+    Query coverage: 92%
+    E-value: 0.0
+    Bitscore: 1306
+  Hit :
+    Species: Saccharomyces mikatae
+    Full reference: Saccharomyces mikatae ATCC MYA-4448 ITS region; from TYPE material
+    % identity: 97.786
+    Query coverage: 96%
+    E-value: 0.0
+    Bitscore: 1292
+
+
