@@ -315,6 +315,11 @@ class TestFlaskRoutes:
             )
         assert response.status_code == 200
         html = response.data.decode()
+        assert 'class="stack unsaved-run"' in html
+        assert 'role="alert"' in html
+        assert "Result not saved" in html
+        assert "Save this result" in html
+        assert html.index("Result not saved") < html.index("<h2>Summary</h2>")
         assert "summary-table" in html
         assert "Candida albicans" in html
         assert "Species confirmed" in html
